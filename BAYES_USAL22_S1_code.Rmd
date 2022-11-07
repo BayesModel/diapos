@@ -1,0 +1,937 @@
+---
+title: "Una primera aproximación a la Estadística Bayesiana. Sesión I"
+author: "Asun Mtnez. Mayoral y Javier Morales"
+institute: "IUI CIO Universidad Miguel Hernández de Elche"
+date: "Noviembre 2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+# theme: "AnnArbor" "Berlin" "Berkeley"
+# color dolphin, beaver crane
+library(tidyverse)
+library(kableExtra)
+library(RColorBrewer)
+theme_set(theme_minimal())
+colores_fill <- scale_fill_brewer(palette = "PuOr")
+```
+
+
+## Inferencia clásica (II)
+
+Distribución del estadístico de contraste bajo $H_0$:
+$$\hat{p}_n|H_0 \sim N(0.8,0.8(0.2)/n)$$
+```{r}
+y=86;n=100
+test=binom.test(y,n, p = 0.8,alternative = "greater",conf.level = 0.95)
+```
+- Observados **$y=$ `r y` en $n=$ `r n`**.
+- Estimación e IC( $95\%$ ) para $p$ : `r test$estimate`(`r round(test$conf.int[1],3)`,`r test$conf.int[2]`).
+- P-valor $=Pr(\hat{p}_n>y_n/n|H_0)=$ `r round(test$p.value,3)`. ¿Conclusión?
+
+```{r fig.height=3, fig.width=3, fig.align='center'}
+p=0.8;n=100;y=86
+x=seq(0,1,length=500)
+z=dnorm(x,p,sqrt(p*(1-p)/n))
+plot(x,z,type="l",ylab="",xlab="",cex.axis=0.5)
+abline(v=y/n,lty="dashed",col="red")
+abline(h=0)
+for(i in x[x>y/n])
+  lines(x=c(i,i),y=c(0,dnorm(i,p,sqrt(p*(1-p)/n))),col="pink")
+```
+
+## Inferencia clásica (III)
+
+```{r}
+y=87;n=100
+test=binom.test(y,n, p = 0.8,alternative = "greater",conf.level = 0.95)
+```
+
+- Observados **$y=$ `r y` en $n=$ `r n`**.
+- Estimación e IC( $95\%$ ) para $p$ : `r test$estimate`(`r round(test$conf.int[1],3)`,`r test$conf.int[2]`).
+- P-valor $=Pr(\hat{p}_n>y_n/n|H_0)=$ `r round(test$p.value,3)`. ¿Conclusión?
+
+```{r fig.height=3, fig.width=3, fig.align='center'}
+p=0.8;n=100;y=87
+x=seq(0,1,length=500)
+z=dnorm(x,p,sqrt(p*(1-p)/n))
+plot(x,z,type="l",ylab="",xlab="",cex.axis=0.5)
+abline(v=y/n,lty="dashed",col="red")
+abline(h=0)
+for(i in x[x>y/n])
+  lines(x=c(i,i),y=c(0,dnorm(i,p,sqrt(p*(1-p)/n))),col="pink")
+```
+
+
+## Inferir en Bayesiano. Verosimilitud
+
+**Verosimilitud** Es la información que proporcionan los datos sobre los parámetros de interés usando la distribución $f$ asumida para modelizarlos, $l(\theta|x) \propto f(x|\theta)$.
+$$Y_n \sim Bin(n,p) \rightarrow l(p|y_n) \propto p^{y_n} \cdot (1-p)^{n-y_n}$$
+
+```{r fig.height=3, fig.width=3, fig.align='center'}
+n=100;y=86;p=0.8
+x=seq(0,1,length=500)
+z=(x^y)*(1-x)^(n-y)
+plot(x,z,type="l",ylab="",xlab="",cex.axis=0.5)
+text(0.4,z[450],"y=86/n=100")
+abline(v=p,lty="dashed",col="red")
+abline(h=0)
+for(i in x[x>p])
+  lines(x=c(i,i),y=c(0,(i^y)*((1-i)^(n-y))),col="green4")
+```
+
+
+## Inferir en Bayesiano. Distribución a priori
+
+**Distribución a priori difusa o mínimo-informativa** (Media=0.5,Var=0.08)
+
+```{r fig.height=4, fig.width=4, fig.align='center'}
+# Datos observados y contraste
+n=100;y=86;p=0.8
+# secuencia de p's a graficar
+x=seq(0,1,length=500)
+
+# Distribución uniforme 0,1
+plot(x,dunif(x),type="l",ylab="",xlab="",col="green3",ylim=c(0,4.2),cex.axis=0.5)
+#for(i in x[x>p])
+#  lines(x=c(i,i),y=c(0,dunif(i)),col="green3")
+abline(v=p,lty="dashed",col="red")
+abline(h=0,col="grey")
+legend(x=0,y=4.2,legend=c("Un(0,1)","Be(2,2)","Be(0.75,0.75)","Be(12,12)","Be(12,3)","Be(3,12)"),
+       col=c("green3","blue","orange","violet","brown","#33cccc"),lty=1,cex=0.5)
+```
+
+## Inferir en Bayesiano. Distribución a priori
+**Distribución a priori $Be(2,2)$** (Media=0.5,Var=0.05)
+  
+```{r fig.height=4, fig.width=4, fig.align='center'}
+# Distribución uniforme 0,1
+plot(x,dunif(x),type="l",ylab="",xlab="",col="green3",ylim=c(0,4.2),cex.axis=0.5)
+abline(v=p,lty="dashed",col="red")
+abline(h=0,col="grey")
+legend(x=0,y=4.2,legend=c("Un(0,1)","Be(2,2)","Be(0.75,0.75)","Be(12,12)","Be(12,3)","Be(3,12)"),
+       col=c("green3","blue","orange","violet","brown","#33cccc"),lty=1,cex=0.5)
+m=0.5; v=0.05
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="blue")
+#for(i in x[x>p])
+#  lines(x=c(i,i),y=c(0,dbeta(i,alpha,alpha*k)),col="blue")
+```
+
+## Inferir en Bayesiano. Distribución a priori
+
+**Distribución a priori $Be(0.75,0.75)$** (Media=0.5,Var=0.1)
+  
+```{r fig.height=4, fig.width=4, fig.align='center'}
+# Distribución uniforme 0,1
+plot(x,dunif(x),type="l",ylab="",xlab="",col="green3",ylim=c(0,4.2),cex.axis=0.5)
+abline(v=p,lty="dashed",col="red")
+abline(h=0,col="grey")
+legend(x=0,y=4.2,legend=c("Un(0,1)","Be(2,2)","Be(0.75,0.75)","Be(12,12)","Be(12,3)","Be(3,12)"),
+       col=c("green3","blue","orange","violet","brown","#33cccc"),lty=1,cex=0.5)
+
+# Distribución beta: media y varianza 
+m=0.5; v=0.05
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="blue")
+
+# Distribución beta: media y varianza 
+m=0.5; v=0.1
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="orange")
+```
+
+## Inferir en Bayesiano. Distribución a priori
+
+**Distribución a priori $Be(12,12)$** (Media=0.5,Var=0.01)
+  
+```{r fig.height=4, fig.width=4, fig.align='center'}
+# Distribución uniforme 0,1
+plot(x,dunif(x),type="l",ylab="",xlab="",col="green3",ylim=c(0,4.2),cex.axis=0.5)
+abline(v=p,lty="dashed",col="red")
+abline(h=0,col="grey")
+legend(x=0,y=4.2,legend=c("Un(0,1)","Be(2,2)","Be(0.75,0.75)","Be(12,12)","Be(12,3)","Be(3,12)"),
+       col=c("green3","blue","orange","violet","brown","#33cccc"),lty=1,cex=0.5)
+# Distribución beta: media y varianza 
+m=0.5; v=0.05
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="blue")
+
+# Distribución beta: media y varianza 
+m=0.5; v=0.1
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="orange")
+
+# Distribución beta: media y varianza 
+m=0.5; v=0.01
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="violet")
+```
+
+## Inferir en Bayesiano. Distribución a priori
+
+**Distribución a priori $Be(12,3)$** (Media=0.8,Var=0.01)
+  
+```{r fig.height=4, fig.width=4, fig.align='center'}
+# Distribución uniforme 0,1
+plot(x,dunif(x),type="l",ylab="",xlab="",col="green3",ylim=c(0,4.2),cex.axis=0.5)
+abline(v=p,lty="dashed",col="red")
+abline(h=0,col="grey")
+legend(x=0,y=4.2,legend=c("Un(0,1)","Be(2,2)","Be(0.75,0.75)","Be(12,12)","Be(12,3)","Be(3,12)"),
+       col=c("green3","blue","orange","violet","brown","#33cccc"),lty=1,cex=0.5)
+# Distribución beta: media y varianza 
+m=0.5; v=0.05
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="blue")
+
+# Distribución beta: media y varianza 
+m=0.5; v=0.1
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="orange")
+
+# Distribución beta: media y varianza 
+m=0.5; v=0.01
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="violet")
+
+# Distribución beta: media y varianza 
+m=0.8; v=0.01
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="brown")
+```
+
+## Inferir en Bayesiano. Distribución a priori
+
+**Distribución a priori $Be(3,12)$** (Media=0.2,Var=0.01)
+  
+```{r fig.height=4, fig.width=4, fig.align='center'}
+# Distribución uniforme 0,1
+plot(x,dunif(x),type="l",ylab="",xlab="",col="green3",ylim=c(0,4.2),cex.axis=0.5)
+abline(v=p,lty="dashed",col="red")
+abline(h=0,col="grey")
+legend(x=0,y=4.2,legend=c("Un(0,1)","Be(2,2)","Be(0.75,0.75)","Be(12,12)","Be(12,3)","Be(3,12)"),
+       col=c("green3","blue","orange","violet","brown","#33cccc"),lty=1,cex=0.5)
+# Distribución beta: media y varianza 
+m=0.5; v=0.05
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="blue")
+
+# Distribución beta: media y varianza 
+m=0.5; v=0.1
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="orange")
+
+# Distribución beta: media y varianza 
+m=0.5; v=0.01
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="violet")
+
+# Distribución beta: media y varianza 
+m=0.8; v=0.01
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="brown")
+
+# Distribución beta: media y varianza 
+m=0.2; v=0.01
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+lines(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="#33cccc")
+```
+
+
+## Inferir en Bayesiano. Distribución posterior
+
+**Distribución posterior** con previa mín.info $Un(0,1)$
+
+```{r fig.height=4, fig.width=4, fig.align='center'}
+# Datos observados y contraste
+n=100;y=86;p=0.8
+# secuencia de p's a graficar
+x=seq(0,1,length=500)
+
+# Distribución beta: media y varianza 
+m=0.5; v=1/12
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+plot(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="blue",ylim=c(0,12),cex.axis=0.5)
+abline(v=p,lty="dashed",col="red")
+abline(h=0,col="grey")
+
+lines(x,dbeta(x,y+1,n-y+1),col="green3")
+
+lines(x,dbeta(x,alpha+y,alpha*k+n-y),col="brown")
+
+#for(i in x[x>p])
+#  lines(x=c(i,i),y=c(0,dbeta(i,alpha,alpha*k)),col="blue")
+legend(x=0,y=12,legend=c("Previa","Verosimilitud","Posterior"),
+       col=c("blue","green3","brown"),lty=1,cex=0.5)
+```
+
+## Inferir en Bayesiano. Distribución posterior
+
+**Distribución posterior** con previa dispersa $Be(2,2)$
+
+```{r fig.height=4, fig.width=4, fig.align='center'}
+# Datos observados y contraste
+n=100;y=86;p=0.8
+# secuencia de p's a graficar
+x=seq(0,1,length=500)
+
+# Distribución beta: media y varianza 
+m=0.5; v=0.05
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+plot(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="blue",ylim=c(0,12),cex.axis=0.5)
+abline(v=p,lty="dashed",col="red")
+abline(h=0,col="grey")
+
+lines(x,dbeta(x,y+1,n-y+1),col="green3")
+
+lines(x,dbeta(x,alpha+y,alpha*k+n-y),col="brown")
+
+#for(i in x[x>p])
+#  lines(x=c(i,i),y=c(0,dbeta(i,alpha,alpha*k)),col="blue")
+legend(x=0,y=12,legend=c("Previa","Verosimilitud","Posterior"),
+       col=c("blue","green3","brown"),lty=1,cex=0.5)
+```
+
+## Inferir en Bayesiano. Distribución posterior
+
+**Distribución posterior** con previa informativa $Be(12,3)$
+
+```{r fig.height=4, fig.width=4, fig.align='center'}
+# Datos observados y contraste
+n=100;y=86;p=0.8
+# secuencia de p's a graficar
+x=seq(0,1,length=500)
+
+# Distribución beta: media y varianza 
+m=0.8; v=0.01
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+plot(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="blue",ylim=c(0,12),cex.axis=0.5)
+abline(v=p,lty="dashed",col="red")
+abline(h=0,col="grey")
+
+lines(x,dbeta(x,y+1,n-y+1),col="green3")
+
+lines(x,dbeta(x,alpha+y,alpha*k+n-y),col="brown")
+
+#for(i in x[x>p])
+#  lines(x=c(i,i),y=c(0,dbeta(i,alpha,alpha*k)),col="blue")
+legend(x=0,y=12,legend=c("Previa","Verosimilitud","Posterior"),
+       col=c("blue","green3","brown"),lty=1,cex=0.5)
+```
+
+## Inferir en Bayesiano. Distribución posterior
+
+**Distribución posterior** con previa sesgada $Be(3,12)$
+
+```{r fig.height=4, fig.width=4, fig.align='center'}
+# Datos observados y contraste
+n=100;y=86;p=0.8
+# secuencia de p's a graficar
+x=seq(0,1,length=500)
+
+# Distribución beta: media y varianza 
+m=0.2; v=0.01
+# parámetros de la Beta
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+plot(x,dbeta(x,alpha,alpha*k),type="l",ylab="",xlab="",col="blue",ylim=c(0,12),cex.axis=0.5)
+abline(v=p,lty="dashed",col="red")
+abline(h=0,col="grey")
+
+lines(x,dbeta(x,y+1,n-y+1),col="green3")
+
+lines(x,dbeta(x,alpha+y,alpha*k+n-y),col="brown")
+
+#for(i in x[x>p])
+#  lines(x=c(i,i),y=c(0,dbeta(i,alpha,alpha*k)),col="blue")
+legend(x=0,y=12,legend=c("Previa","Verosimilitud","Posterior"),
+       col=c("blue","green3","brown"),lty=1,cex=0.5)
+```
+
+
+
+## Inferir en Bayesiano. Estimación en intervalo
+
+
+
+```{r}
+# función para calcular el hpd con la inversa de la fon.distribución
+hpd.fun<-function (posterior.icdf, conf = 0.95, tol = 1e-08, ...) 
+{
+    conf <- min(conf, 1 - conf)
+    f <- function(x, posterior.icdf, conf, ...) {
+        posterior.icdf(1 - conf + x, ...) - posterior.icdf(x, 
+            ...)
+    }
+    out <- optimize(f, c(0, conf), posterior.icdf = posterior.icdf, 
+        conf = conf, tol = tol, ...)
+    return(c(posterior.icdf(out$minimum, ...), posterior.icdf(1 - 
+        conf + out$minimum, ...)))
+}
+```
+
+
+```{r fig.height = 2, fig.width = 4, fig.align = "center"}
+p=seq(0,1,length=500)
+alpha=2;beta=3
+prior=data.frame(p,y=dbeta(p,alpha,beta)) 
+hpd=hpd.fun(qbeta,shape1=alpha,shape2=beta)
+dhpd=dbeta(hpd,alpha,beta)
+
+ggplot(prior,aes(x=p,y=y))+
+  geom_line()+
+  geom_vline(xintercept=qbeta(c(0.025,0.975),alpha,beta),
+             linetype="dashed",color="red")+
+  geom_hline(yintercept = dbeta(qbeta(0.025,alpha,beta),alpha,beta),color="red")+
+  annotate("text",x=0.4,y=dbeta(qbeta(0.025,alpha,beta)+0.005,alpha,beta),
+           label="RC(95%)",color="red",cex=2)+
+  geom_vline(xintercept=hpd,linetype="dashed",color="blue")+
+  geom_hline(yintercept = dhpd[1],color="blue")+
+  annotate("text",x=0.4,y=dhpd[1]+0.03,
+           label="HPDR(95%)",color="blue",cex=2)+
+  theme(axis.text=element_text(size=6))
+```
+
+## Inferir en Bayesiano. Respuestas estimación
+
+Observados: $y_n=86$, $n=100$.
+
+\small
+
+```{r}
+funpos=function(alpha, beta,y,n,p){
+  media.p=(alpha+y)/(alpha+beta+n)
+  sd.p=sqrt((alpha+y)*(beta+n-y)/((alpha+beta+n)^2*(alpha+beta+n+1)))
+  rc.low=qbeta(0.025,alpha+y,beta+n-y)
+  rc.up=qbeta(0.975,alpha+y,beta+n-y)
+  hpd=hpd.fun(qbeta,shape1=alpha+y,shape2=beta+n-y)
+  hpd.low=hpd[1]
+  hpd.up=hpd[2]
+  return(round(c(media.p,sd.p,rc.low,rc.up,hpd.low,hpd.up),3))}
+
+
+resul=array(dim=c(4,6),dimnames=list(c("Un(0,1)","Be(2,2)","Be(12,3)","Be(3,12)"),
+                                     c("E", "sd","RC.low","RC.up","HPD.low","HPD.up")))
+
+y=86;n=100;p=0.8
+# p1
+alpha=1;beta=1
+resul[1,]=funpos(alpha,beta,y,n,p)
+# p2
+alpha=2;beta=2
+resul[2,]=funpos(alpha,beta,y,n,p)
+# p3
+alpha=12;beta=3
+resul[3,]=funpos(alpha,beta,y,n,p)
+# p4
+alpha=3;beta=12
+resul[4,]=funpos(alpha,beta,y,n,p)
+kbl(resul) %>%
+  kable_classic(full_width = F, html_font = "Arial")
+```
+
+
+**RETO:** Obtén respuestas cuando varía el número de pacientes con mejoría $y_n$.
+
+
+## Inferir en Bayesiano. Respuestas contraste
+
+Podemos responder las cuestiones que nos interesan:
+
+- ¿Qué certidumbre tenemos sobre $H_1: p >0.8$? 
+
+Probabilidad posterior:
+$$Pr(H_1|y_n)=1-F_{Be(\alpha+y_n,\beta+n-y_n)} (0.8)$$
+```{r}
+funpos=function(alpha, beta,y,n,p){
+  prob.h1.ini=1-pbeta(p,alpha,beta)
+  prob.h1=1-pbeta(p,alpha+y,beta+n-y)
+  b01=((1-prob.h1)*(1-pbeta(p,alpha,beta)))/(prob.h1*pbeta(p,alpha,beta))
+  return(round(c(prob.h1.ini,prob.h1,b01),3))}
+
+
+resul=array(dim=c(4,3),dimnames=list(c("Un(0,1)","Be(2,2)","Be(12,3)","Be(3,12)"),
+                                     c("PH1.ini","PH1.post", "B01")))
+
+y=86;n=100;p=0.8
+# p1
+alpha=1;beta=1
+resul[1,]=funpos(alpha,beta,y,n,p)
+# p2
+alpha=2;beta=2
+resul[2,]=funpos(alpha,beta,y,n,p)
+# p3
+alpha=12;beta=3
+resul[3,]=funpos(alpha,beta,y,n,p)
+# p4
+alpha=3;beta=12
+resul[4,]=funpos(alpha,beta,y,n,p)
+kbl(resul) %>%
+  kable_classic(full_width = F, html_font = "Arial")
+```
+
+
+## Inferir en Bayesiano. Respuestas predicción
+
+```{r}
+y=86;n=100;p=0.8
+alpha=1;beta=1
+nsim=5000
+set.seed(123)
+sim=tibble(p=rbeta(nsim,alpha+y,beta+n-y))
+sim$z1=rbinom(nsim,1,sim$p)
+sim$z50=rbinom(nsim,50,sim$p)
+
+pmejora.1=mean(sim$z1)
+e50=mean(sim$z50)
+rc50=quantile(sim$z50,probs=c(0.025,0.975))
+sd50=sd(sim$z50)
+pmejora50.40=mean(sim$z50>40)
+```
+
+Observados: $y_n=86$, $n=100$.
+
+- ¿Con qué probabilidad mejorará un nuevo enfermo que aparezca en el estudio? `r round(pmejora.1)`
+
+
+- Si se decide repetir el experimento con otros 50 enfermos, 
+    * ¿cuántos se espera que mejoren? `r e50`
+    * ¿con qué certidumbre? IC(95%)=[`r rc50[1]`,`r rc50[2]`]
+    * ¿cuál es la probabilidad de que mejoren más de 40? `r pmejora50.40`
+
+**RETO**. Calcula las respuestas con otros resultados en el estudio previo.
+
+## Comparación de proporciones. Verosimilitud
+
+**Verosimilitud** en cada hospital
+
+```{r fig.height = 2, fig.width = 4, fig.align = "center"}
+p=seq(0,1,length=500)
+na=215;nb=256;ya=31;yb=29
+verosim=function(p,n,y){
+  dbeta(p,y+1,n-y+1)
+}
+A=verosim(p,na,ya)
+B=verosim(p,nb,yb)
+veros=data.frame(p,A,B)
+veros %>%
+  pivot_longer(cols = 2:3,names_to = "hospital",values_to = "veros")%>%
+  ggplot(aes(x=p,y=veros,color=hospital))+
+  geom_line()+
+  labs(x="p",y="")+
+  theme(axis.text=element_text(size=5),title=element_text(size=8))
+
+```
+
+## Comparación de proporciones. Información inicial objetiva
+
+**(NoInf)** Ignorancia o mínima-información: $p_j$ es una probabilidad
+$$p\in [0,1] \Rightarrow p\sim Un(0,1) \equiv Be(1,1)$$
+```{r fig.height = 2, fig.width =2, fig.align = "center"}
+p=seq(0,1,length=500)
+prior=data.frame(p,p1=dbeta(p,1,1))
+prior %>% 
+  ggplot(aes(x=p,y=p1))+
+  geom_line(color="orange")+
+  labs(y="",title="Distribución previa",cex=0.5)+
+  ylim(0,1.01)+
+  theme(axis.text=element_text(size=5),title=element_text(size=8))
+```
+
+## Comparación de proporciones. Información inicial experta
+
+**(Expert)** Información experta: Cirujanos cardiovasculares estiman $n_e$ muertes por cada $n_o$ operaciones (media $m=n_e/n_o$), y manifiestan su incertidumbre con la desviación típica $v$.
+$$p\sim Be(\alpha,\alpha \kappa); \ \kappa=\frac{1}{m}-1; \ \alpha=\frac{m^2}{v^2} ( 1-m-\frac{v^2}{m})$$
+```{r}
+p=seq(0,1,length=500)
+# EstPrev 1. Simple
+exitos=1; fracasos=5
+prior$p2=dbeta(p,exitos,fracasos)
+# Experto 2. Poco seguro
+m=exitos/(exitos+fracasos); v=m^2 # media y varianza
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+prior$p3=dbeta(p,alpha,alpha*k)
+# Experto 3. Muy seguro
+m=exitos/(exitos+fracasos); v=(0.1*m)^2 # media y varianza
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+prior$p4=dbeta(p,alpha,alpha*k)
+```
+
+
+- Info: por cada 6 operaciones fallece un paciente.
+- Certidumbre:
+    * Expert simple: $Beta(\#\text{éxitos},\#\text{fracasos})\equiv Be(1,5)$.
+    * Expert inseguro: $sd(p)=E(p) \Rightarrow p \sim Be(0.67,3.33)$
+    * Expert seguro: $sd(p)=10\%E(p) \Rightarrow p \sim Be(83.17,415.33)$
+    
+## Comparación de proporciones. Información inicial experta
+
+```{r fig.height = 2, fig.width = 4, fig.align = "center"}
+prior %>%
+  pivot_longer(cols=2:5,names_to="info",values_to="prior") %>%
+  filter(info != "p1")  %>%
+  ggplot(aes(x=p,y=prior,color=info)) +
+  geom_line()+
+  labs(y="",title="Distribución previa")+
+  scale_color_discrete(name="Información inicial",
+        labels=c("Expert simple","Expert inseguro","Expert seguro"))+
+  theme(axis.text=element_text(size=5),title=element_text(size=8),
+        legend.title=element_text(size=6),legend.text=element_text(size=5))
+
+```
+
+## Comparación de proporciones. Información inicial de estudios previos
+
+**(EstPrev)** Estudios previos más/menos similares en objetivos/población.
+
+- Info: En otro estudio resultaron 18 muertes en 148 operaciones
+- Certidumbre:
+    * EstPrev simple: $Beta(\#\text{éxitos},\#\text{fracasos})\equiv Be(18,130)$.
+    * EstPrev distinto: $sd(p)=E(p) \Rightarrow p \sim Be(0.76,5.47)$
+    * EstPrev similar: $sd(p)=10\%E(p) \Rightarrow p \sim Be(87.72,633.51)$
+
+```{r}
+p=seq(0,1,length=500)
+# EstPrev 1. Simple
+exitos=18; fracasos=130
+prior$p5=dbeta(p,exitos,fracasos)
+# EstPrev 2. Poblaciones distintas
+m=exitos/(exitos+fracasos); v=m^2 # media y varianza
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+prior$p6=dbeta(p,alpha,alpha*k)
+# EstPrev 3. Poblaciones similares
+m=exitos/(exitos+fracasos); v=(0.1*m)^2 # media y varianza
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+prior$p7=dbeta(p,alpha,alpha*k)
+```
+
+## Comparación de proporciones. Información inicial de estudios previos
+
+```{r fig.height = 2, fig.width = 4, fig.align = "center"}
+prior %>%
+  pivot_longer(cols=2:8,names_to="info",values_to="prior") %>%
+  filter(info %in% c("p5","p6","p7"))  %>%
+  ggplot(aes(x=p,y=prior,color=info)) +
+  geom_line()+
+  labs(y="",title="Distribución previa")+
+  scale_color_discrete(name="Información inicial",
+          labels=c("EstPrev simple","EstPrev distinto","EstPrev similar"))+
+  theme(axis.text=element_text(size=5),title=element_text(size=8),
+        legend.title=element_text(size=6),legend.text=element_text(size=5))
+
+```
+
+## Comparación de proporciones. Información inicial
+
+**Información inicial** con todas las propuestas.
+
+```{r fig.height = 2, fig.width = 4, fig.align = "center"}
+prior %>%
+  pivot_longer(cols=2:8,names_to="info",values_to="prior") %>%
+  ggplot(aes(x=p,y=prior,color=info)) +
+  geom_line()+
+  labs(y="",title="Distribución previa")+
+  scale_color_discrete(name="Info Estudios previos",
+       labels=c("NoInf","Expert simple","Expert inseguro","Expert seguro",  "EstPrev simple","EstPrev distinto","EstPrev similar"))+
+  theme(axis.text=element_text(size=5),title=element_text(size=8),
+        legend.title=element_text(size=6),legend.text=element_text(size=5))
+
+```
+
+
+## Comparación de proporciones. Posterior con previa NoInf
+
+Los datos guían la posterior:
+
+```{r fig.height = 2.5, fig.width = 4.5, fig.align = "center",warning=FALSE}
+p=seq(0,1,length=500)
+na=215;nb=256;ya=31;yb=29
+exitos=fracasos=1
+posterior.noinf=data.frame(p=p,
+                         prior.a=dbeta(p,exitos,fracasos),
+                         prior.b=dbeta(p,exitos,fracasos),
+                         post.a=dbeta(p,exitos+ya,fracasos+na-ya),
+                         post.b=dbeta(p,exitos+yb,fracasos+nb-yb),
+                         veros.a=dbeta(p,ya+1,na-ya+1),
+                         veros.b=dbeta(p,yb+1,nb-yb+1))
+posterior.noinf %>%
+  pivot_longer(cols=-1,names_to="info",values_to="distribution")%>%
+  mutate(hospital=str_sub(info,-1),distri=str_sub(info,1,4)) %>%
+  ggplot(aes(x=p,y=distribution)) +
+  geom_line(aes(color=distri))+
+  labs(y="",title="")+
+  xlim(0,0.75)+
+  facet_wrap(vars(hospital,distri))+
+  scale_color_discrete(name="Distribución",labels=c("Posterior","Prior","Verosim"))+
+  theme(axis.text=element_text(size=5),title=element_text(size=8),
+      legend.title=element_text(size=6),legend.text=element_text(size=5))
+```
+
+## Comparación de proporciones. Posterior con previa Expert sencilla
+
+
+```{r}
+p=seq(0,1,length=500)
+na=215;nb=256;ya=31;yb=29
+p=seq(0,1,length=500)
+# EstPrev 1. Simple
+exitos=1; fracasos=5
+par.prior=function(precision){
+m=exitos/(exitos+fracasos); v=(precision*m)^2 # media y varianza 
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+return(c(alpha,alpha*k))
+}
+par.post=function(precision,y,n){
+m=exitos/(exitos+fracasos); v=(precision*m)^2 # media y varianza 
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+return(c(alpha+y,alpha*k+n-y))
+}
+```
+
+```{r fig.height = 2.5, fig.width = 4.5, fig.align = "center",warning=FALSE}
+posterior.sim=data.frame(p=p,
+                         prior.a=dbeta(p,exitos,fracasos),
+                         prior.b=dbeta(p,exitos,fracasos),
+                         post.a=dbeta(p,exitos+ya,fracasos+na-ya),
+                         post.b=dbeta(p,exitos+yb,fracasos+nb-yb),
+                         veros.a=dbeta(p,ya+1,na-ya+1),
+                         veros.b=dbeta(p,yb+1,nb-yb+1))
+
+posterior.sim %>%
+  pivot_longer(cols=-1,names_to="info",values_to="distribution")%>%
+  mutate(hospital=str_sub(info,-1),distri=str_sub(info,1,4)) %>%
+  ggplot(aes(x=p,y=distribution)) +
+  geom_line(aes(color=distri))+
+  labs(y="",title="")+
+  xlim(0,0.75)+
+  facet_wrap(vars(hospital))+
+  scale_color_discrete(name="Distribución",labels=c("Posterior","Prior","Verosim"))+
+  theme(axis.text=element_text(size=5),title=element_text(size=8),
+      legend.title=element_text(size=6),legend.text=element_text(size=5))
+```
+
+## Comparación de proporciones. Posterior con previa Expert inseguro
+
+```{r fig.height = 2.5, fig.width = 4.5, fig.align = "center",warning=FALSE}
+posterior.seg=data.frame(p=p,
+                         prior.a=dbeta(p,par.prior(1)[1],par.prior(1)[2]),
+                         prior.b=dbeta(p,par.prior(1)[1],par.prior(1)[2]),
+                         post.a=dbeta(p,par.post(1,ya,na)[1],par.post(1,ya,na)[2]),
+                         post.b=dbeta(p,par.post(1,yb,nb)[1],par.post(1,yb,nb)[2]),
+                         veros.a=dbeta(p,ya+1,na-ya+1),
+                         veros.b=dbeta(p,yb+1,nb-yb+1))
+
+posterior.seg %>%
+  pivot_longer(cols=-1,names_to="info",values_to="distribution")%>%
+  mutate(hospital=str_sub(info,-1),distri=str_sub(info,1,4)) %>%
+  ggplot(aes(x=p,y=distribution)) +
+  geom_line(aes(color=distri))+
+  labs(y="",title="")+
+  xlim(0,0.75)+
+  facet_wrap(vars(hospital))+
+  scale_color_discrete(name="Distribución",labels=c("Posterior","Prior","Verosim"))+
+  theme(axis.text=element_text(size=5),title=element_text(size=8),
+      legend.title=element_text(size=6),legend.text=element_text(size=5))
+```
+
+## Comparación de proporciones. Posterior con previa Expert seguro
+
+```{r fig.height = 2.5, fig.width = 4.5, fig.align = "center",warning=FALSE}
+posterior.seg=data.frame(p=p,
+                         prior.a=dbeta(p,par.prior(0.1)[1],par.prior(0.1)[2]),
+                         prior.b=dbeta(p,par.prior(0.1)[1],par.prior(0.1)[2]),
+                         post.a=dbeta(p,par.post(0.1,ya,na)[1],par.post(0.1,ya,na)[2]),
+                         post.b=dbeta(p,par.post(0.1,yb,nb)[1],par.post(0.1,yb,nb)[2]),
+                         veros.a=dbeta(p,ya+1,na-ya+1),
+                         veros.b=dbeta(p,yb+1,nb-yb+1))
+
+posterior.seg %>%
+  pivot_longer(cols=-1,names_to="info",values_to="distribution")%>%
+  mutate(hospital=str_sub(info,-1),distri=str_sub(info,1,4)) %>%
+  ggplot(aes(x=p,y=distribution)) +
+  geom_line(aes(color=distri))+
+  labs(y="",title="")+
+  xlim(0,0.3)+
+  facet_wrap(vars(hospital))+
+  scale_color_discrete(name="Distribución",labels=c("Posterior","Prior","Verosim"))+
+  theme(axis.text=element_text(size=5),title=element_text(size=8),
+      legend.title=element_text(size=6),legend.text=element_text(size=5))
+```
+
+## Comparación de proporciones. Posterior con Estudios Previos (EstPrev)
+Información previa sencilla (sen), estudios similares (sim), estudios distintos (dis).
+
+```{r}
+p=seq(0,1,length=500)
+na=215;nb=256;ya=31;yb=29
+p=seq(0,1,length=500)
+
+exitos=18; fracasos=130
+par.prior=function(precision){
+m=exitos/(exitos+fracasos); v=(precision*m)^2 # media y varianza 
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+return(c(alpha,alpha*k))
+}
+par.post=function(precision,y,n){
+m=exitos/(exitos+fracasos); v=(precision*m)^2 # media y varianza 
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+return(c(alpha+y,alpha*k+n-y))
+}
+```
+
+                         
+```{r fig.height = 2.5, fig.width = 4.5, fig.align = "center",warning=FALSE}
+posterior=data.frame(p=p,
+                     prior.sen.a=dbeta(p,exitos,fracasos),
+                     prior.sen.b=dbeta(p,exitos,fracasos),
+                     prior.dis.a=dbeta(p,par.prior(1)[1],par.prior(1)[2]),
+                     prior.dis.b=dbeta(p,par.prior(1)[1],par.prior(1)[2]),
+                     prior.sim.a=dbeta(p,par.prior(0.1)[1],par.prior(0.1)[2]),
+                     prior.sim.b=dbeta(p,par.prior(0.1)[1],par.prior(0.1)[2]),
+                     postt.sen.a=dbeta(p,exitos+ya,fracasos+na-ya),
+                     postt.sen.b=dbeta(p,exitos+yb,fracasos+nb-yb),
+                     postt.dis.a=dbeta(p,par.post(1,ya,na)[1],par.post(1,ya,na)[2]),
+                     postt.dis.b=dbeta(p,par.post(1,yb,nb)[1],par.post(1,yb,nb)[2]),
+                     postt.sim.a=dbeta(p,par.post(0.1,ya,na)[1],par.post(0.1,ya,na)[2]),
+                     postt.sim.b=dbeta(p,par.post(0.1,yb,nb)[1],par.post(0.1,yb,nb)[2]),
+                     veros.sen.a=dbeta(p,ya+1,na-ya+1),veros.sen.b=dbeta(p,yb+1,nb-yb+1),
+                     veros.dis.a=dbeta(p,ya+1,na-ya+1),veros.dis.b=dbeta(p,yb+1,nb-yb+1),
+                     veros.sim.a=dbeta(p,ya+1,na-ya+1),veros.sim.b=dbeta(p,yb+1,nb-yb+1))
+
+posterior%>%
+  pivot_longer(cols=-1,names_to="info",values_to="distribution")%>%
+  mutate(hospital=str_sub(info,-1),distri=str_sub(info,1,4),
+         tipo=str_sub(info,7,9)) %>%
+  ggplot(aes(x=p,y=distribution)) +
+  geom_line(aes(color=distri))+
+  labs(y="",title="")+
+  xlim(0,0.3)+
+  facet_wrap(vars(hospital,tipo))+
+  scale_color_discrete(name="Distribución",labels=c("Posterior","Prior","Verosim"))+
+  theme(axis.text=element_text(size=5),title=element_text(size=8),
+      legend.title=element_text(size=6),legend.text=element_text(size=5))
+
+```
+
+
+## Comparación de proporciones. Resultados Expert
+
+```{r fig.align="center", fig.height=2.5, fig.width=4.5, message=FALSE, warning=FALSE}
+na=215;nb=256;ya=31;yb=29
+p=seq(0,1,length=500)
+exitos=1; fracasos=5
+
+par.post=function(precision,y,n){
+m=exitos/(exitos+fracasos); v=(precision*m)^2 # media y varianza 
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+return(c(alpha+y,alpha*k+n-y))
+}
+
+# Para simular de la posterior de pA-pB,
+# 1) simulamos (pA|yA) y (pB|yB)
+nsim=10000
+# Experto seguro
+par.seg.A=par.post(0.1,ya,na)
+par.seg.B=par.post(0.1,yb,nb)
+set.seed(1234)
+pA.seg.post=rbeta(nsim,par.seg.A[1],par.seg.A[2])
+pB.seg.post=rbeta(nsim,par.seg.B[1],par.seg.B[2])
+
+# Experto inseguro
+par.ins.A=par.post(1,ya,na)
+par.ins.B=par.post(1,yb,nb)
+set.seed(1234)
+pA.ins.post=rbeta(nsim,par.ins.A[1],par.ins.A[2])
+pB.ins.post=rbeta(nsim,par.ins.B[1],par.ins.B[2])
+
+#2) Calculamos la transformación
+pdif.post.seg=pA.seg.post-pB.seg.post
+pdif.post.ins=pA.ins.post-pB.ins.post
+p=data.frame(post=c(pdif.post.seg,pdif.post.ins),Expert=rep(c("Seguro","Inseguro"),c(nsim,nsim)))
+ggplot(p,aes(x=post,color=Expert,fill=Expert))+
+  geom_histogram(aes(y=..density..),alpha=0.5,position="identity")+
+  geom_density(alpha=0.6)+
+  labs(x="",y="",title="Posterior Diferencia de proporciones")+
+  theme(axis.text=element_text(size=5),title=element_text(size=8),
+      legend.title=element_text(size=6),legend.text=element_text(size=5))
+```
+
+## Comparación de proporciones. Resultados Expert
+  
+**Estimación posterior de la diferencia de proporciones**
+
+```{r}
+#3) Obtenemos los estimadores empíricos
+
+# Función para calcular el HPDR a partir de las simulaciones de la posterior
+hpd.sim<-function (x, conf = 0.95) 
+{
+  # x: simulaciones de la posterior
+  # conf: porcentaje de la HPD
+  conf <- min(conf, 1 - conf)
+  n <- length(x)
+  nn <- round(n * conf)
+  x <- sort(x)
+  xx <- x[(n - nn + 1):n] - x[1:nn]
+  m <- min(xx)
+  nnn <- which(xx == m)[1]
+  return(c(x[nnn], x[n - nn + nnn]))
+}
+
+p.post=p %>%
+  group_by(Expert) %>%
+  summarise(m=mean(post),s=sd(post),
+            rc.low=quantile(post,0.025),rc.up=quantile(post,0.975),
+            hpd.low=hpd.sim(post)[1],hpd.up=hpd.sim(post)[2])
+kbl(p.post,digits=3) %>%
+  kable_styling(full_width = FALSE,position="center")
+```
+
+**Contraste de hipótesis**  $$H_0: p_A \leq p_B ; \ H_1 : p_A>p_B$$
+
+```{r}
+# Simulamos de la prior pA y pB
+exitos=1;fracasos=5
+par.prior=function(precision){
+m=exitos/(exitos+fracasos); v=(precision*m)^2 # media y varianza 
+k=1/m-1; alpha=m^2*(1-m-v/m)/v
+return(c(alpha,alpha*k))
+}
+set.seed(1234)
+pars.ini=par.prior(0.1) # experto seguro
+pa.seg=rbeta(nsim,pars.ini[1],pars.ini[2])
+pb.seg=rbeta(nsim,pars.ini[1],pars.ini[2])
+pars.ini=par.prior(1) # experto inseguro
+pa.ins=rbeta(nsim,pars.ini[1],pars.ini[2])
+pb.ins=rbeta(nsim,pars.ini[1],pars.ini[2])
+
+
+# distribución inicial
+p$ini=c(pa.seg-pb.seg,pa.ins-pb.ins)
+p.post=p %>%
+  group_by(Expert) %>%
+  summarise(ph1.ini=mean(ini>0),ph1.post=mean(post>0),
+  b01=((1-ph1.ini)/ph1.ini)/((1-ph1.post)/ph1.post))
+
+kbl(p.post) %>%
+  kable_styling(full_width = FALSE,position="center")
+```
+
